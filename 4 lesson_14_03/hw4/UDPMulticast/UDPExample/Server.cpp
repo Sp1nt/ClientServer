@@ -2,17 +2,22 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <sstream>
 using namespace std;
 
 #define MAX_CLIENTS 10
 #define DEFAULT_BUFLEN 4096
 
 #pragma comment(lib, "ws2_32.lib") // Winsock library
-#pragma warning(disable:4996) // отключаем предупреждение _WINSOCK_DEPRECATED_NO_WARNINGS
+#pragma warning(disable:4996) 
 
 SOCKET server_socket;
 
 vector<string> history;
+vector <string> nicks;
+vector <string> colors;
+
+
 
 int main() {
 	system("title Server");
@@ -65,7 +70,7 @@ int main() {
 		FD_SET(server_socket, &readfds);
 
 		// добавить дочерние сокеты в fdset
-		for (int i = 0; i < MAX_CLIENTS; i++) 
+		for (int i = 0; i < MAX_CLIENTS; i++)
 		{
 			SOCKET s = client_socket[i];
 			if (s > 0) {
@@ -80,7 +85,7 @@ int main() {
 		}
 
 		// если что-то произошло на мастер-сокете, то это входящее соединение
-		SOCKET new_socket; // новый клиентский сокет
+		SOCKET new_socket; // новый клиентский сокет 
 		sockaddr_in address;
 		int addrlen = sizeof(sockaddr_in);
 		if (FD_ISSET(server_socket, &readfds)) {
@@ -102,6 +107,7 @@ int main() {
 			for (int i = 0; i < MAX_CLIENTS; i++) {
 				if (client_socket[i] == 0) {
 					client_socket[i] = new_socket;
+
 					printf("Adding to list of sockets at index %d\n", i);
 					break;
 				}
@@ -122,23 +128,28 @@ int main() {
 				// recv не помещает нулевой терминатор в конец строки (в то время как printf %s предполагает, что он есть)
 
 				char client_message[DEFAULT_BUFLEN];
-
 				int client_message_length = recv(s, client_message, DEFAULT_BUFLEN, 0);
 				client_message[client_message_length] = '\0';
 
-				string check_exit = client_message;
-				if (check_exit == "off")
+
+				int color;
+				char nick[DEFAULT_BUFLEN];
+				char message[DEFAULT_BUFLEN];
+
+				sscanf_s(client_message, "%d(%", &color, nick, DEFAULT_BUFLEN, message, DEFAULT_BUFLEN);
+
+				HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+				const char* windowTitle = "Client";
+
+
+
+				history.push_back(message);
+
+				for (int i = 0; i < MAX_CLIENTS; i++)
 				{
-					cout << "Client #" << i << " is off\n";
-					client_socket[i] = 0;
-				}
-
-				string temp = client_message;
-				// temp += "\n";
-				history.push_back(temp);
-
-				for (int i = 0; i < MAX_CLIENTS; i++) {
-					if (client_socket[i] != 0) {
+					if (client_socket[i] != 0)
+					{
 						send(client_socket[i], client_message, client_message_length, 0);
 					}
 				}
